@@ -15,9 +15,9 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on an Illumina platform and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper, or using the mtMutS primers described in Everett and Park (2018), published in Deep-sea Research Part II. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
+This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on an Illumina platform and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
 
-For the sake of this demonstration, I am going to analyze eDNA metabarcoding libraries generated using the Anth-28S-eDNA primers. For the other primer sets, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification.
+For the sake of this demonstration, I am going to analyze eDNA metabarcoding libraries generated using the Anth-28S-eDNA primers. For  other primers, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification.
 
 1. Trimming primers from the reads using cutadapt (Martin 2011; DOI:10.14806/ej.17.1.200) 
 
