@@ -1,0 +1,229 @@
+---
+title: "Anthozoan Coral eDNA Metabarcoding Bioinformatics Analysis"
+author: "Luke McCartin"
+date: "2023-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on an Illumina platform and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper, or using the mtMutS primers described in Everett and Park (2018), published in Deep-sea Research Part II. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
+
+For the sake of this demonstration, I am going to analyze eDNA metabarcoding libraries generated using the Anth-28S-eDNA primers. For the other primer sets, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification.
+
+1. Trimming primers from the reads using cutadapt (Martin 2011; DOI:10.14806/ej.17.1.200) 
+
+Cutadapt is installed in a conda environment as described in the documentation for the software: https://cutadapt.readthedocs.io/en/v2.0/installation.html.
+
+```{zsh engine.opts='-i'}
+conda activate cutadaptenv #activating the cutadapt conda environment
+
+cd ~/Anthozoan_eDNA_metabarcoding_analysis #navigate to your working directory here
+
+mkdir primers-trimmed #making a directory for the files with the primers trimmed
+
+#The following code runs cutadapt in a for loop to trim the primers from the reads using the default parameters.
+for sample in *_S*_R1_001.fastq.gz; do
+  SAMPLE=$(echo ${sample} | sed "s/_R1_\001\.fastq.gz//")
+  cutadapt \
+  -a "^CGTGAAACCGYTRRAAGGG;required...CGTCTTGAAACACGGACCAA;optional" \
+  -A "^TTGGTCCGTGTTTCAAGACG;required...CCCTTYYARCGGTTTCACG;optional" \
+  --action trim --discard-untrimmed \
+  --pair-filter=any \
+  -o ./primers-trimmed/primers-trimmed-${SAMPLE}_R1_001.fastq.gz -p ./primers-trimmed/primers-trimmed-${SAMPLE}_R2_001.fastq.gz \
+  ${SAMPLE}_R1_001.fastq.gz ${SAMPLE}_R2_001.fastq.gz
+done
+
+conda deactivate
+```
+
+2. Quality filtering, denoising, merging and removing chimeric reads using DADA2 (Callahan 2016; https://doi.org/10.1038/nmeth.3869) to generate an amplicon sequence variant (ASV) counts table and .fasta files with denoised ASVs. Much of this code is taken directly from the DADA2 tutorial: https://benjjneb.github.io/dada2/tutorial.html.
+
+```{r}
+library(dada2)
+
+setwd("~/Anthozoan_eDNA_metabarcoding_analysis") #navigate to your working directory here
+
+fnFs <- list.files("./primers-trimmed", pattern="_R1_001.fastq.gz", full.names=TRUE) #listing and define the fastq.gz files with trimmed, forward reads
+fnRs <- list.files("./primers-trimmed", pattern="_R2_001.fastq.gz", full.names=TRUE) #listing and define the fastq.gz files with trimmed, reverse reads
+head(fnFs)
+
+q_plot_F <- plotQualityProfile(fnFs[c(1:4)]) #plotting quality of forward reads
+
+pdf(paste("./q_plot_F.pdf"), width = 11, height = 8.5)
+print(q_plot_F)
+dev.off()
+
+q_plot_R <- plotQualityProfile(fnRs[c(1:4)]) #plotting quality of reverse reads
+
+pdf(paste("./q_plot_R.pdf"), width = 11, height = 8.5)
+print(q_plot_R)
+dev.off()
+
+filtFs <- file.path("filtered", basename(fnFs)) #creating a directory for the filtered forward reads
+filtRs <- file.path("filtered", basename(fnRs)) #creating a directory for the filtered reverse reads
+
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen = c(250, 175), verbose = TRUE) #quality filtering the reads and truncating them to 250 (forward) and 175 (reverse) bp based off of their quality profiles
+
+#The following code defines the paths to the filtered files, which is necessary in case some sequence files have no reads that pass the filter (reasonable for negative control samples).
+filt_fnFs <- list.files('./filtered', pattern="_R1_001.fastq.gz", full.names=TRUE)
+filt_fnRs <- list.files('./filtered', pattern="_R2_001.fastq.gz", full.names=TRUE)
+filtFs <- file.path('./filtered', basename(filt_fnFs))
+filtRs <- file.path('./filtered', basename(filt_fnRs))
+
+errF <- learnErrors(filtFs, multi=TRUE, verbose = TRUE) #learning the error models for the forward, filtered reads
+errR <- learnErrors(filtRs, multi=TRUE, verbose = TRUE) #learning the error models for the reverse, filtered reads
+
+e_plot_F <- plotErrors(errF) #plotting the fit of the forward error model
+
+pdf(paste("./e_plot_F.pdf"), width = 11, height = 8.5)
+print(e_plot_F)
+dev.off()
+
+e_plot_R <- plotErrors(errR) #plotting the fit of the reverse error model
+
+pdf(paste("./e_plot_R.pdf"), width = 11, height = 8.5)
+print(e_plot_R)
+dev.off()
+
+ddF <- dada(filtFs, errF, pool="pseudo", multi=TRUE) #denoising the forward reads
+ddR <- dada(filtRs, errR, pool="pseudo", multi=TRUE) #denoising the reverse reads
+
+merged <- mergePairs(ddF, filtFs, ddR, filtRs, verbose=TRUE) #merging the read pairs
+
+table.chimeras <- makeSequenceTable(merged) #constructing the ASV counts table
+
+table.no.chimeras <- removeBimeraDenovo(table.chimeras, multi=TRUE, verbose=TRUE) #removing chimeric ASVs
+
+#The following code 
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(ddF, getN), sapply(ddR, getN), sapply(merged, getN), rowSums(table.no.chimeras))
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+rownames(track) <- basename(fnFs)
+head(track)
+
+write.csv(track, "pipeline_stats.csv") #writing this to a file
+
+write.table(t(table.no.chimeras), file = 'table.tsv', sep = "\t", row.names = TRUE, col.names=NA, quote=FALSE) #writing the ASV counts table to a file
+
+uniquesToFasta(table.no.chimeras, fout='rep-seqs.fasta', ids = paste("ASV",1:ncol(table.no.chimeras),sep="_")) #writing the ASVS to a .fasta file as well
+```
+
+3. Conducting a BLAST search of the ASVs by querying them against GenBank.
+
+BLAST and entrez-direct are installed in a conda environment separate from cutadapt on my computer. The environment is named "blast". Both can be installed by navigating to their pages on https://anaconda.org/.
+
+```{zsh engine.opts='-i'}
+cd ~/Anthozoan_eDNA_metabarcoding_analysis
+
+conda activate blast
+
+blastn -db nt -remote -query rep-seqs.fasta -out BLAST_results.tsv -max_target_seqs 10 -outfmt "6 qseqid qlen sseqid staxids slen sstart send length pident evalue"
+
+awk '{print $4}' BLAST_results.tsv > taxid.txt #extracting the fourth column, which contains the subject taxonomy ids of each subject sequence
+efetch -input "taxid.txt" -db "Taxonomy" -format docsum | xtract -pattern DocumentSummary -element Id Division Genus Species > taxonomy.txt #returning the taxonomic identifications of for each taxonomy id #
+
+awk 'BEGIN{RS=">";OFS="\t"}NR>1{print $1,$2}' rep-seqs.fasta > rep-seqs.tsv
+
+conda deactivate
+```
+
+4. Filtering the sequences to corals based off of their top BLAST hits. This chunk of code relies on the 'tidyverse' packages (Wickham et al. 2019; doi:10.21105/joss.01686)
+
+```{r}
+setwd("~/Anthozoan_eDNA_metabarcoding_analysis")
+
+library(tidyverse)
+
+blast <- read.delim("BLAST_results.tsv", header = FALSE) #reading in the blast results
+
+blast.taxonomy <- read.delim("taxonomy.txt", header = FALSE)
+blast.taxonomy$V1 <- as.character(blast.taxonomy$V1)
+blast.taxonomy.distinct <- distinct(blast.taxonomy)
+blast.hits.taxonomy <- left_join(blast, blast.taxonomy, by = c("V4" = "V1")) #merging the blast hits with their taxonomic identities
+
+#The following code filters the data anthozoan ASVs reads based on their top BLAST hit (smallest e-value), a percent identity of 90% to a coral and a coverage across the queried sequence of 90%.
+blast.top.anth <- blast.hits.taxonomy %>% 
+  group_by(V1) %>%
+  filter(V10 == min(V10)) %>%
+  filter(V2.y %in% c('stony corals', 'black corals', 'blue corals', 'soft corals')) %>%
+  filter(V8/V2.x >= .90) %>%
+  filter(V9 >= 90)
+
+anth.ids <- unique(blast.top.anth$V1) #defining the ASVs that are anthozoan corals
+
+seqs <- read.delim("rep-seqs.tsv", header = FALSE) #reading in the file with the ASV sequences
+anth.seqs <- filter(seqs, V1 %in% anth.ids)
+
+write.table(anth.seqs, file = 'coral-rep-seqs.tsv', sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE) #writing the sequences that are coral and their names for creating a BLAST database to be used with LULU
+
+table = read.delim("table.tsv", row.names = 1, sep = '\t') #reading in the ASV counts table
+table$seq <- row.names(table)
+table.anth <- left_join(anth.seqs, table, by = c('V2'='seq')) #defining the table with only Anthozoan coral ASVs
+
+write.table(table.anth, file = 'coral_table.tsv', sep = "\t", row.names = FALSE, col.names=TRUE, quote=FALSE) #write this coral table to file
+```
+
+5. Generating a match list of the coral ASVs for curation with LULU (Frøslev et al. 2017; https://doi.org/10.1038/s41467-017-01312-x)
+
+```{zsh engine.opts='-i'}
+cd ~/Anthozoan_eDNA_metabarcoding_analysis
+
+conda activate blast
+
+awk -F '\t' '{printf ">%s\n%s\n",$1,$2}' coral-rep-seqs.tsv > coral-rep-seqs.fasta #converting the coral seqs in a .tsv format to a .fasta file
+
+makeblastdb -in coral-rep-seqs.fasta -parse_seqids -dbtype nucl #creating a matchlist by first creating a BLAST database...
+blastn -db coral-rep-seqs.fasta -outfmt '6 qseqid sseqid pident' -out match_list.txt -qcov_hsp_perc 80 -query coral-rep-seqs.fasta #...and then conducting a BLAST search on the sequences against one another
+
+conda deactivate
+```
+
+6. Curating the ASVs with LULU and using the assignTaxonomy and assignSpecies functions implemented in DADA2 to classify their taxonomy. The code to run LULU is taken from the LULU tutorial (https://github.com/tobiasgf/lulu) and the code to classify the taxonomy of the ASVs is taken from the Taxonomic Assignment page on the DADA2 website (https://benjjneb.github.io/dada2/assign.html).
+
+For this example, I am going to use the taxonomic classifier file for anthozoan sequences amplified using the Anth-28S-eDNA primers.
+
+```{r}
+library(tidyverse)
+library(dada2)
+library(lulu)
+
+setwd('/Users/paragorgia/Anthozoan_eDNA_metabarcoding_analysis')
+
+anth.table <- read.delim('coral_table.tsv')
+seq.ids <- read.delim('coral-rep-seqs.tsv', header = FALSE)
+
+row.names(anth.table) <- anth.table$V1
+anth.table <- subset(anth.table, select = -c(V1, V2))
+
+match.list <- read.delim('match_list.txt', header = FALSE)
+
+curated.table <- lulu(anth.table, match.list, minimum_match = 95)
+curated.table.df <- curated.table$curated_table
+curated.table.df$seq.id <- row.names(curated.table.df)
+
+curated.table.df <- left_join(curated.table.df, seq.ids, by = c("seq.id" = "V1"))
+row.names(curated.table.df) <- curated.table.df$seq.id
+
+seqs <- curated.table.df$V2
+system.time(tax <- assignTaxonomy(seqs, "Anth_28S_assignTaxonomy_global_20231024.fasta", multi=TRUE, minBoot = 80,
+                                  taxLevels = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus"))) #classifying to the genus level with assignTaxonomy
+unname(head(tax))
+
+system.time(species <- addSpecies(tax, "Anth_28S_assignSpecies_watlantic_20230912.fasta", allowMultiple=TRUE)) #finding 100% matches to our reference database of Gulf of Mexico corals with assignSpecies
+unname(head(species))
+
+species.df <- as.data.frame(species)
+species.df$seq <- row.names(species.df)
+species.df.export <- left_join(species.df, curated.table.df, by = c('seq' = 'V2'))
+
+write.table(species.df.export, file = 'Anth_classifier_results.tsv', sep = "\t", row.names = FALSE, quote=FALSE) #writing the ASV counts table with the taxonomic classifications of each coral ASV
+```
