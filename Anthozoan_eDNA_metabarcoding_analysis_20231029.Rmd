@@ -15,9 +15,9 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
 
-This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on the Illumina MiSeq platform, and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper, or using the mtMutS primers described in Everett and Park (2018), published in Deep-sea Research Part II. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
+This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on the Illumina MiSeq platform, and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
 
-For the sake of this demonstration, I am going to analyze four eDNA metabarcoding libraries generated from samples using the Anth-28S-eDNA primers. For the other primer sets, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification. Make sure that you adjust the parameters of each command depending on the specifics of your dataset. For instance, the parameters of the filterAndTrim function in chunk DADA2 should be adjusted depending on the quality profiles of your dataset and the read length that you've used.
+For the sake of this demonstration, I am going to analyze four eDNA metabarcoding libraries generated from samples using the Anth-28S-eDNA primers. For the Scler-28S primers, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification. Make sure that you adjust the parameters of each command depending on the specifics of your dataset. For instance, the parameters of the filterAndTrim function in chunk DADA2 should be adjusted depending on the quality profiles of your dataset and the read length that you've used.
 
 1. Trimming primers from the reads using cutadapt (Martin 2011; DOI:10.14806/ej.17.1.200) 
 
@@ -34,8 +34,8 @@ mkdir primers-trimmed #making a directory for the files with the primers trimmed
 for sample in *_S*_R1_001.fastq.gz; do
   SAMPLE=$(echo ${sample} | sed "s/_R1_\001\.fastq.gz//")
   cutadapt \
-  -a "^CGTGAAACCGYTRRAAGGG;required...CGTCTTGAAACACGGACCAA;optional" \
-  -A "^TTGGTCCGTGTTTCAAGACG;required...CCCTTYYARCGGTTTCACG;optional" \
+  -a "^CGTGAAACCGYTRRAAGGG;required...CGTCTTGAAACACGGACCAA;optional" \ #for Scler-28S: "^AKGGAAACGAATGGRCTMAG;required...CTTGAAACACGGACCAAGGA;optional" 
+  -A "^TTGGTCCGTGTTTCAAGACG;required...CCCTTYYARCGGTTTCACG;optional" \ #for Scler-28S: "^TCCTTGGTCCGTGTTTCAAG;required...CTKAGYCCATTCGTTTCCMT;optional"
   --action trim --discard-untrimmed \
   --pair-filter=any \
   -o ./primers-trimmed/primers-trimmed-${SAMPLE}_R1_001.fastq.gz -p ./primers-trimmed/primers-trimmed-${SAMPLE}_R2_001.fastq.gz \
