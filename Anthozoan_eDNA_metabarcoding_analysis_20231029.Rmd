@@ -15,13 +15,35 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
 
-This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on the Illumina MiSeq platform, and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper. It requires a number of commonly used bioinformatic packages that are implemented in either bash or R notebook chunks.
+This R markdown file accompanies McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment". It assumes that you have generated amplicon sequencing data generated on the Illumina MiSeq platform, and that the data are demultiplexed. It is suitable for the analysis of anthozoan coral metabarcoding data generated using the Anth-28S-eDNA or Scler-28S-eDNA primers described in our paper. 
 
-For the sake of this demonstration, I am going to analyze four eDNA metabarcoding libraries generated from samples using the Anth-28S-eDNA primers. For the Scler-28S primers, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification. Make sure that you adjust the parameters of each command depending on the specifics of your dataset. For instance, the parameters of the filterAndTrim function in chunk DADA2 should be adjusted depending on the quality profiles of your dataset and the read length that you've used.
+The analysis requires a number of commonly used bioinformatic packages that are implemented in either zsh or R code chunks. Please be sure to cite these packages if you plan to use this code for your analyses. These packages are installed in conda environments on my computer (https://conda.io/projects/conda/en/latest/index.html).
+
+cutadapt:
+Martin, M. (2011). Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.Journal, 17(1), 10–12. https://doi.org/10.14806/ej.17.1.200
+
+DADA2:
+Callahan, B. J., McMurdie, P. J., Rosen, M. J., Han, A. W., Johnson, A. J. A., and Holmes, S. P. (2016). DADA2: High resolution sample inference from Illumina amplicon data. Nature Methods, 13(7), 581–583. https://doi.org/10.1038/nmeth.3869
+
+BLAST:
+Altschul, S. F., Gish, W., Miller, W., Myers, E. W., and Lipman, D. J. (1990). Basic local alignment search tool. Journal of Molecular Biology, 215(3), 403–410. https://doi.org/10.1016/s0022-2836(05)80360-2
+
+LULU:
+Frøslev, T. G., Kjøller, R., Bruun, H. H., Ejrnæs, R., Brunbjerg, A. K., Pietroni, C., and Hansen, A. J. (2017). Algorithm for post-clustering curation of DNA amplicon data yields reliable biodiversity estimates. Nature Communications, 8(1), 1188. https://doi.org/10.1038/s41467-017-01312-x
+
+tidyverse:
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T., Miller, E., Bache, S., Müller, K., Ooms, J., Robinson, D., Seidel, D., Spinu, V., Takahashi, K., Vaughan, D., Wilke, C., Woo, K., and Yutani, H. (2019). Welcome to the Tidyverse. Journal of Open Source Software, 4(43), 1686. https://doi.org/10.21105/joss.01686
+
+For the sake of this demonstration, I am going to analyze four eDNA metabarcoding libraries generated from samples using the Anth-28S-eDNA primers. For the Scler-28S primers, simply replace the primer sequences at the primer-trimming step and replace the reference database files for taxonomic classification. The following two lines can be used for the Scler-28S primers in place of Lines 59-60.
+
+-a "^AKGGAAACGAATGGRCTMAG;required...CTTGAAACACGGACCAAGGA;optional" \
+-A "^TCCTTGGTCCGTGTTTCAAG;required...CTKAGYCCATTCGTTTCCMT;optional" \
+
+Make sure that you adjust the parameters of each command depending on the specifics of your dataset. For instance, the parameters of the filterAndTrim function in chunk DADA2 should be adjusted depending on the quality profiles of your dataset and the read length that you've used.
 
 1. Trimming primers from the reads using cutadapt (Martin 2011; DOI:10.14806/ej.17.1.200) 
 
-Cutadapt is installed in a conda environment as described in the documentation for the software: https://cutadapt.readthedocs.io/en/v2.0/installation.html.
+Cutadapt is installed in a conda environment on my computer as described in the documentation for the software: https://cutadapt.readthedocs.io/en/v2.0/installation.html.
 
 ```{zsh, primer-trimming, engine.opts='-i'}
 conda activate cutadaptenv #activating the cutadapt conda environment
