@@ -34,8 +34,8 @@ mkdir primers-trimmed #making a directory for the files with the primers trimmed
 for sample in *_S*_R1_001.fastq.gz; do
   SAMPLE=$(echo ${sample} | sed "s/_R1_\001\.fastq.gz//")
   cutadapt \
-  -a "^CGTGAAACCGYTRRAAGGG;required...CGTCTTGAAACACGGACCAA;optional" \ #for Scler-28S: "^AKGGAAACGAATGGRCTMAG;required...CTTGAAACACGGACCAAGGA;optional" 
-  -A "^TTGGTCCGTGTTTCAAGACG;required...CCCTTYYARCGGTTTCACG;optional" \ #for Scler-28S: "^TCCTTGGTCCGTGTTTCAAG;required...CTKAGYCCATTCGTTTCCMT;optional"
+  -a "^CGTGAAACCGYTRRAAGGG;required...CGTCTTGAAACACGGACCAA;optional" \
+  -A "^TTGGTCCGTGTTTCAAGACG;required...CCCTTYYARCGGTTTCACG;optional" \
   --action trim --discard-untrimmed \
   --pair-filter=any \
   -o ./primers-trimmed/primers-trimmed-${SAMPLE}_R1_001.fastq.gz -p ./primers-trimmed/primers-trimmed-${SAMPLE}_R2_001.fastq.gz \
