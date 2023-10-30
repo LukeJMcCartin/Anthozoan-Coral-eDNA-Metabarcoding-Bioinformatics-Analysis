@@ -2,3 +2,5 @@
 Code and reference barcode database sequence files associated with McCartin et al. 2023 "Nuclear eDNA Metabarcoding Primers for Anthozoan Coral Biodiversity Assessment" for the analysis of eDNA metabarcoding data generated using the 28S PCR primers.
 
 The RMarkdown file ("Anthozoan_eDNA_metabarcoding_analysis_20231029.Rmd") includes both R and zsh code chunks for the analysis of metabarcoding data generated using the 28S primers.
+
+The html file ("Anthozoan_eDNA_metabarcoding_analysis_20231029.html") is a rendered document corresponding to the RMarkdown file and offers an example analysis of eDNA samples using the Anth-28S primers.
