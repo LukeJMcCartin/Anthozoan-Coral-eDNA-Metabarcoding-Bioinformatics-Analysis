@@ -219,7 +219,7 @@ curated.table.df <- left_join(curated.table.df, seq.ids, by = c("seq.id" = "V1")
 row.names(curated.table.df) <- curated.table.df$seq.id
 
 seqs <- curated.table.df$V2
-system.time(tax <- assignTaxonomy(seqs, "Anth_28S_assignTaxonomy_global_20231024.fasta", multi=TRUE, minBoot = 80,
+system.time(tax <- assignTaxonomy(seqs, "Anth_28S_assignTaxonomy_global_20241015.fasta", multi=TRUE, minBoot = 80,
                                   taxLevels = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus"))) #classifying to the genus level with assignTaxonomy
 unname(head(tax))
 
