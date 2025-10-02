@@ -219,16 +219,13 @@ curated.table.df <- left_join(curated.table.df, seq.ids, by = c("seq.id" = "V1")
 row.names(curated.table.df) <- curated.table.df$seq.id
 
 seqs <- curated.table.df$V2
-system.time(tax <- assignTaxonomy(seqs, "Anth_28S_assignTaxonomy_20250825.fasta", multi=TRUE, minBoot = 80,
-                                  taxLevels = c("Kingdom", "Phylum", "Class", "Order", "Superfamily", "Family","Subfamily/Clade", "Genus"))) #classifying to the genus level with assignTaxonomy
+system.time(tax <- assignTaxonomy(seqs, "anth_coral_references_20240915_formatted_for_assignTax.fasta", multi=TRUE, minBoot = 80,
+                                  taxLevels = c("Kingdom", "Phylum", "Class", "Order", "Superfamily", "Family","Subfamily/Clade", "Genus"))) # classifying to the genus level with assignTaxonomy
 unname(head(tax))
 
-system.time(species <- addSpecies(tax, "Anth_28S_assignSpecies_watlantic_20230912.fasta", allowMultiple=TRUE)) #finding 100% matches to our reference database of Gulf of Mexico corals with assignSpecies
-unname(head(species))
+tax.df <- as.data.frame(tax)
+tax.df$seq <- row.names(tax.df)
+tax.df.export <- left_join(tax.df, curated.table.df, by = c('seq' = 'V2'))
 
-species.df <- as.data.frame(species)
-species.df$seq <- row.names(species.df)
-species.df.export <- left_join(species.df, curated.table.df, by = c('seq' = 'V2'))
-
-write.table(species.df.export, file = 'Anth_classifier_results.tsv', sep = "\t", row.names = FALSE, quote=FALSE) #writing the ASV counts table with the taxonomic classifications of each coral ASV
+write.table(tax.df.export, file = 'Anth_classifier_results.tsv', sep = "\t", row.names = FALSE, quote=FALSE) # writing the ASV counts table with the taxonomic classifications of each coral ASV
 ```
